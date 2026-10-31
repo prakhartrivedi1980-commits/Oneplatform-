@@ -1,0 +1,30 @@
+# OnePlatform local infrastructure
+
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7
+    container_name: oneplatform-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16
+    container_name: oneplatform-postgres
+    environment:
+      POSTGRES_USER: oneplatform
+      POSTGRES_PASSWORD: oneplatform
+      POSTGRES_DB: oneplatform
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  postgres_data:
