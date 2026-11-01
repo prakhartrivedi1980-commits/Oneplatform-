@@ -37,4 +37,16 @@ Thumbs.db
 tmp/
 temp/
 .cache/
+
+# Turbo
+.turbo/
+.turbo/**/
+
+# App-specific build outputs
+apps/**/.next/
+apps/**/dist/
+
+# Workspace files
+apps/**/pnpm-workspace.yaml
+apps/**/pnpm-lock.yaml
 EOF
