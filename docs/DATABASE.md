@@ -55,6 +55,38 @@ Prisma is configured to:
 - **Migration Status**: Applied successfully to Supabase.
 - **Prisma Migrate Status**: Schema is up to date.
 
+## Authentication Integration
+
+### Supabase Auth
+
+- **Provider**: Supabase Email authentication.
+- **Identity Source**: Supabase auth.users table.
+- **Application Data**: OnePlatform public.User table.
+
+### User Synchronization Strategy
+
+- **1:1 Relationship**: Each Supabase user maps to exactly one OnePlatform User.
+- **Initial Sync**: When a Supabase user signs up, a corresponding OnePlatform User is created with:
+  - `email` field populated from Supabase auth.users.email.
+  - `name` field populated from Supabase auth.users.user_metadata.full_name if available.
+  - Default values for other fields.
+- **Update Sync**: On subsequent logins, the OnePlatform User is updated with any new metadata from Supabase.
+- **Security**: No direct database triggers are used; synchronization is handled via application logic.
+
+### Environment Variables
+
+- **NEXT_PUBLIC_SUPABASE_URL**: Publicly accessible Supabase URL.
+- **NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY**: Supabase publishable key for browser usage.
+- **SUPABASE_URL**: Supabase URL for server-side usage.
+- **SUPABASE_PUBLISHABLE_KEY**: Supabase publishable key for server-side usage.
+
+### Supabase Client Utilities
+
+- **Browser**: `packages/shared/src/supabase/browser.ts`
+- **Server**: `packages/shared/src/supabase/server.ts`
+
+These utilities provide clean, reusable Supabase client instances for both browser and server environments.
+
 ## Supabase Configuration
 
 - **Database Provider**: PostgreSQL
