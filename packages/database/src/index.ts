@@ -1,2 +1,1 @@
-// Minimal database package entry point
-export const databasePackage = {};
+export * from '@prisma/client';

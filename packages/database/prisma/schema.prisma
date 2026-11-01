@@ -1,0 +1,248 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Platform {
+  LEETCODE
+  CODECHEF
+  HACKERRANK
+  CODEFORCES
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+  UNKNOWN
+}
+
+enum SyncStatus {
+  PENDING
+  SYNCING
+  SUCCESS
+  FAILED
+}
+
+enum SubmissionStatus {
+  ACCEPTED
+  WRONG_ANSWER
+  TIME_LIMIT_EXCEEDED
+  MEMORY_LIMIT_EXCEEDED
+  RUNTIME_ERROR
+  COMPILE_ERROR
+  PARTIAL
+  OTHER
+}
+
+enum GoalType {
+  PROBLEMS_SOLVED
+  DAILY_STREAK
+  TOPIC_MASTERY
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+enum RecommendationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RecommendationStatus {
+  ACTIVE
+  COMPLETED
+  DISMISSED
+}
+
+model User {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  username    String?  @unique
+  displayName String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  platformAccounts PlatformAccount[]
+  submissions      Submission[]
+  dailyActivities  DailyActivity[]
+  topicStats       UserTopicStats[]
+  goals            Goal[]
+  recommendations  Recommendation[]
+}
+
+model PlatformAccount {
+  id               String     @id @default(uuid())
+  userId           String
+  platform         Platform
+  platformUsername String
+  externalId       String?
+  profileUrl       String?
+  syncStatus       SyncStatus @default(PENDING)
+  lastSyncedAt     DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@unique([userId, platform])
+  @@unique([platform, platformUsername])
+  @@index([userId])
+  @@index([platform])
+}
+
+model Problem {
+  id         String     @id @default(uuid())
+  platform   Platform
+  externalId String
+  title      String
+  difficulty Difficulty @default(UNKNOWN)
+  url        String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  submissions     Submission[]
+  problemTopics   ProblemTopic[]
+  recommendations Recommendation[]
+
+  @@unique([platform, externalId])
+  @@index([platform])
+  @@index([difficulty])
+}
+
+model Topic {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  problemTopics   ProblemTopic[]
+  userTopicStats  UserTopicStats[]
+  goals           Goal[]
+  recommendations Recommendation[]
+}
+
+model ProblemTopic {
+  problemId String
+  topicId   String
+  createdAt DateTime @default(now())
+
+  problem Problem @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  topic   Topic   @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([problemId, topicId])
+  @@index([topicId])
+}
+
+model Submission {
+  id                String           @id @default(uuid())
+  userId            String
+  platformAccountId String
+  problemId         String
+  externalId        String?
+  status            SubmissionStatus
+  language          String?
+  submittedAt       DateTime
+  createdAt         DateTime         @default(now())
+
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platformAccount PlatformAccount @relation(fields: [platformAccountId], references: [id], onDelete: Cascade)
+  problem         Problem         @relation(fields: [problemId], references: [id], onDelete: Restrict)
+
+  @@unique([platformAccountId, externalId])
+  @@index([userId, submittedAt])
+  @@index([platformAccountId, submittedAt])
+  @@index([problemId])
+  @@index([status])
+}
+
+model DailyActivity {
+  id             String   @id @default(uuid())
+  userId         String
+  date           DateTime @db.Date
+  problemsSolved Int      @default(0)
+  submissions    Int      @default(0)
+  easySolved     Int      @default(0)
+  mediumSolved   Int      @default(0)
+  hardSolved     Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([date])
+}
+
+model UserTopicStats {
+  id            String   @id @default(uuid())
+  userId        String
+  topicId       String
+  attempted     Int      @default(0)
+  solved        Int      @default(0)
+  accuracy      Float    @default(0)
+  strengthScore Float    @default(0)
+  updatedAt     DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@index([topicId])
+}
+
+model Goal {
+  id        String     @id @default(uuid())
+  userId    String
+  topicId   String?
+  type      GoalType
+  target    Int
+  progress  Int        @default(0)
+  status    GoalStatus @default(ACTIVE)
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([topicId])
+}
+
+model Recommendation {
+  id          String                 @id @default(uuid())
+  userId      String
+  topicId     String?
+  problemId   String?
+  reason      String
+  priority    RecommendationPriority @default(MEDIUM)
+  status      RecommendationStatus   @default(ACTIVE)
+  generatedAt DateTime               @default(now())
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic   Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  problem Problem? @relation(fields: [problemId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([topicId])
+  @@index([problemId])
+  @@index([priority])
+}
