@@ -1,12 +1,25 @@
+import Navbar from '@/components/Navbar';
+import Hero from '@/components/Hero';
+import DashboardPreview from '@/components/DashboardPreview';
+import UnifiedTracking from '@/components/UnifiedTracking';
+import AnalyticsInsights from '@/components/AnalyticsInsights';
+import Recommendations from '@/components/Recommendations';
+import SupportedPlatforms from '@/components/SupportedPlatforms';
+import FinalCTA from '@/components/FinalCTA';
+import Footer from '@/components/Footer';
+
 export default function Page() {
   return (
-    <main className="min-h-screen bg-gray-100 dark:bg-gray-900">
-      <div className="container mx-auto px-4 py-12">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">OnePlatform</h1>
-        <p className="mt-4 text-gray-600 dark:text-gray-300">
-          A unified coding progress and analytics platform for students.
-        </p>
-      </div>
+    <main className="min-h-screen bg-white">
+      <Navbar />
+      <Hero />
+      <DashboardPreview />
+      <UnifiedTracking />
+      <AnalyticsInsights />
+      <Recommendations />
+      <SupportedPlatforms />
+      <FinalCTA />
+      <Footer />
     </main>
   );
 }

@@ -1,89 +1,121 @@
-# Design System
+# OnePlatform Design System
 
-## Overview
+## Color Palette
 
-OnePlatform is designed as a polished modern developer analytics interface with a focus on usability and clarity.
-
-## Design Principles
-
-1. **Dark Mode**: First-class support for dark mode
-2. **Accessibility**: WCAG 2.1 AA compliance
-3. **Responsive**: Works on all device sizes
-4. **Consistency**: Consistent UI patterns
-5. **Performance**: Optimized for fast loading
-6. **Minimalism**: Avoids unnecessary complexity
-7. **Animation**: Purposeful and subtle animations
+- **Primary Background**: Off-white/light neutral (bg-white, bg-gray-50)
+- **Typography**: Near-black (text-gray-900, text-gray-600)
+- **Accent**: Subtle blue (bg-blue-500)
+- **Borders**: Thin neutral (border-gray-200)
+- **Status Colors**:
+  - Green (bg-green-500) for strong topics
+  - Red (bg-red-500) for weak topics
+  - Yellow (bg-yellow-500) for medium difficulty
 
 ## Typography
 
-1. **Primary Font**: System font stack with fallback to sans-serif
-2. **Font Sizes**: Responsive typography with rem units
-3. **Line Heights**: Optimal line heights for readability
-4. **Font Weights**: Limited set of weights for consistency
+- **Headings**: Bold, large (text-3xl to text-5xl)
+- **Body Text**: Regular, medium (text-lg to text-xl)
+- **Hierarchy**: Clear visual distinction between headings and body text
 
 ## Spacing
 
-1. **Scale**: 4px increment spacing scale
-2. **Consistency**: Consistent use of spacing throughout
-3. **Responsive**: Adjusts for different screen sizes
+- **Generous whitespace**: Consistent padding (py-16 to py-20)
+- **Component spacing**: Consistent gap between sections (gap-6 to gap-8)
 
-## Color System
+## Borders and Shadows
 
-1. **Palette**: Neutral base with accent colors
-2. **Dark Mode**: Complementary dark mode palette
-3. **Accessibility**: Colors meet contrast requirements
-4. **Theming**: Support for custom themes
+- **Subtle borders**: Thin, neutral (border border-gray-200)
+- **Minimal shadows**: Soft shadow-sm for depth (shadow-sm)
+- **No shadows**: For primary components
 
-## Components
+## Layout
 
-1. **Cards**: Consistent card design with shadows and borders
-2. **Navigation**: Clear and intuitive navigation
-3. **Charts**: Consistent chart styling
-4. **Activity Heatmaps**: Visual representation of user activity
-5. **Loading States**: Clear loading indicators
-6. **Error States**: Helpful error messages
-7. **Success States**: Clear success indicators
+- **Max-width containers**: max-w-4xl for content sections
+- **Responsive grids**: grid-cols-1 to grid-cols-2 for different screen sizes
 
-## Responsive Behavior
+## Interactive Elements
 
-1. **Breakpoints**: Standard breakpoints for responsive design
-2. **Layout**: Flexible layouts that adapt to screen size
-3. **Components**: Components that adapt to screen size
+- **Buttons**:
+  - Primary: bg-gray-900, text-white
+  - Secondary: border border-gray-300, text-gray-900
+- **Hover states**: Slight color change on hover
+- **Focus states**: Visible focus indicators
+
+## Visual Hierarchy
+
+- **Dashboard Preview**: Prominent placement with clear visual hierarchy
+- **Data Visualizations**: Clean, minimal charts with subtle axes/grid
+- **Section Headings**: Strong typography with appropriate spacing
 
 ## Accessibility
 
-1. **Keyboard Navigation**: Full keyboard navigation support
-2. **Screen Reader**: Support for screen readers
-3. **Focus States**: Clear focus states for interactive elements
-4. **Color Contrast**: Meets WCAG contrast requirements
-5. **Semantic HTML**: Proper use of semantic HTML elements
+- **Contrast**: Sufficient contrast for all text
+- **Semantic HTML**: Proper use of headings and landmarks
+- **Focus states**: Clear visible focus for keyboard navigation
 
-## Animation
+## Responsive Behavior
 
-1. **Purposeful**: Animations serve a purpose
-2. **Subtle**: Animations are subtle and not distracting
-3. **Performance**: Animations are optimized for performance
-4. **Reduced Motion**: Respects user preferences for reduced motion
+- **Desktop-first**: Designed for desktop with responsive adjustments
+- **Breakpoints**: md: for medium screens, sm: for small screens
+- **Mobile considerations**: Stacked layouts, larger touch targets
 
-## Implementation Considerations
+## Visual Direction
 
-1. **CSS Variables**: Use of CSS variables for theming
-2. **Component Library**: Shared component library
-3. **Design Tokens**: Centralized design tokens
-4. **Storybook**: Component documentation and testing
-5. **Figma**: Design system in Figma for collaboration
+- **Waymark-inspired**: Premium minimal analytics-product aesthetic
+- **No gradients**: Flat color scheme
+- **No glassmorphism**: Solid surfaces
+- **No excessive rounded corners**: Subtle rounded corners only where appropriate
 
-## Future Considerations
+## Component Structure
 
-1. **Component Library**: Shared component library across applications
-2. **Design Tokens**: Centralized design tokens
-3. **Storybook**: Component documentation and testing
-4. **Figma**: Design system in Figma for collaboration
+- **Reusable components**: Created for consistent UI elements
+- **Component-based design**: Each section is a self-contained component
 
-## Implementation Considerations
+## Visual Flow
 
-1. **CSS Variables**: Use of CSS variables for theming
-2. **Component Library**: Shared component library
-3. **Design Tokens**: Centralized design tokens
-4. **Storybook**: Component documentation and testing
-5. **Figma**: Design system in Figma for collaboration
+- **Clear visual flow**: Consistent section structure and spacing
+- **Editorial tone**: Clean, professional presentation
+- **Analytics focus**: Emphasis on data visualization and coding analytics
+
+## Platform Representation
+
+- **Text-based platform identities**: Simple text/initial-based representations
+- **No copyrighted logos**: Original visual treatment for platforms
+
+## Visual Consistency
+
+- **Consistent styling**: Across all components and sections
+- **Visual rhythm**: Consistent spacing and hierarchy
+
+## Visual Distinction
+
+- **Subtle alternating surfaces**: For section distinction
+- **Visual emphasis**: Clear visual hierarchy without clutter
+
+## Visual Refinement
+
+- **Polished dashboard preview**: Realistic coding analytics dashboard
+- **Clean data visualizations**: Minimalist and informative
+- **Strong typography**: Clear hierarchy and readability
+
+## Visual Integration
+
+- **Seamless integration**: Components work together as a cohesive whole
+- **Visual cohesion**: Consistent styling across all sections
+
+## Visual Direction
+
+- **Premium minimal**: High-quality, clean, and professional
+- **Analytics-focused**: Emphasis on coding analytics and data visualization
+- **Editorial tone**: Clear, professional, and informative
+
+## Visual Refinement
+
+- **Polished dashboard preview**: Realistic and professional
+- **Clean data visualizations**: Minimalist and informative
+- **Strong typography**: Clear hierarchy and readability
+
+## Visual Integration
+
+- **Seamless integration**: Components work together as a cohesive whole
+- **Visual cohesion**: Consistent styling across all sections
