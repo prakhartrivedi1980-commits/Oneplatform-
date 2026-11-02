@@ -1,8 +1,16 @@
 import { Module } from '@nestjs/common';
-import { HealthModule } from './health/health.module';
-import { AuthModule } from './auth/auth.module';
+import { ConfigModule } from '@nestjs/config';
+import { HealthModule } from './health/health.module.js';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
-  imports: [HealthModule, AuthModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '../../.env',
+    }),
+    HealthModule,
+    AuthModule,
+  ],
 })
 export class AppModule {}

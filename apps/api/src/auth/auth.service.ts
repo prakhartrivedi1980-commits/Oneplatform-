@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, User } from '@supabase/supabase-js';
 
 @Injectable()
 export class AuthService {
-  private supabase: SupabaseClient;
+  private readonly supabase: SupabaseClient;
 
   constructor() {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -16,17 +16,17 @@ export class AuthService {
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
-  async verifyToken(token: string): Promise<{ id: string; email: string; user_metadata?: { full_name?: string } }> {
-    try {
-      const { data: { user }, error } = await this.supabase.auth.getUser(token);
+  async verifyToken(token: string): Promise<User> {
+    const { data, error } = await this.supabase.auth.getUser(token);
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      return user;
-    } catch (error) {
+    if (error) {
       throw new Error('Invalid token');
     }
+
+    if (!data.user) {
+      throw new Error('Invalid token');
+    }
+
+    return data.user;
   }
 }
