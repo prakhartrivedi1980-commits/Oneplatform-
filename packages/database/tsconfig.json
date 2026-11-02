@@ -10,6 +10,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "moduleResolution": "node",
+    "declaration": true,
     "baseUrl": ".",
     "paths": {
       "@oneplatform/database/*": ["src/*"]
