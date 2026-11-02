@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function Hero() {
   return (
@@ -13,9 +14,9 @@ export default function Hero() {
             into a single powerful analytics dashboard.
           </p>
           <div className="flex justify-center space-x-4">
-            <button className="bg-gray-900 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-gray-800 transition">
+            <Link href="/signup" className="bg-gray-900 text-white px-6 py-3 rounded-md text-lg font-medium hover:bg-gray-800 transition">
               Get Started
-            </button>
+            </Link>
             <button className="border border-gray-300 text-gray-900 px-6 py-3 rounded-md text-lg font-medium hover:bg-gray-50 transition">
               Learn More
             </button>

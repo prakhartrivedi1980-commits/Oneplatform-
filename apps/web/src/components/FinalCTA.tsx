@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 export default function FinalCTA() {
   return (
@@ -12,12 +13,12 @@ export default function FinalCTA() {
             Connect your coding profiles, understand your progress, and know what to improve next.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button className="bg-gray-900 text-white px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-800 transition">
+            <Link href="/signup" className="bg-gray-900 text-white px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-800 transition">
               Get Started
-            </button>
-            <button className="border border-gray-300 text-gray-900 px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-50 transition">
+            </Link>
+            <Link href="#features" className="border border-gray-300 text-gray-900 px-8 py-3 rounded-md text-lg font-medium hover:bg-gray-50 transition">
               Explore Features
-            </button>
+            </Link>
           </div>
         </div>
       </div>
