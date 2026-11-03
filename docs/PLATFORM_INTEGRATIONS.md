@@ -22,6 +22,11 @@ interface SubmissionCapability {
   ): Promise<PlatformSubmission[]>;
 }
 
+interface SubmissionFetchOptions {
+  from?: number;
+  count?: number;
+}
+
 interface RatingHistoryCapability {
   fetchRatingHistory(
     username: string,
