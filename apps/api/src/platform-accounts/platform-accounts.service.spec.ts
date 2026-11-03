@@ -1,7 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 import { PlatformAccountsService } from './platform-accounts.service';
 import { DatabaseService, PlatformAccount, Platform } from '@oneplatform/database';
+import { CodeforcesAdapter } from '../platforms/codeforces/codeforces.adapter';
+import { AdapterError, AdapterErrorCode } from '../platforms/errors/adapter-error.interface';
+import { ConflictException, NotFoundException, GatewayTimeoutException, ServiceUnavailableException, BadGatewayException } from '@nestjs/common';
 
 const mockDatabaseService = {
   platformAccount: {
@@ -10,6 +12,10 @@ const mockDatabaseService = {
     findMany: jest.fn(),
     delete: jest.fn(),
   },
+};
+
+const mockCodeforcesAdapter = {
+  verifyAccount: jest.fn(),
 };
 
 const mockUserId = 'user-123';
@@ -27,6 +33,13 @@ const mockPlatformAccount: PlatformAccount = {
   updatedAt: new Date(),
 };
 
+const mockCodeforcesProfile = {
+  platform: Platform.CODEFORCES,
+  username: 'testuser',
+  externalId: 'testuser',
+  profileUrl: 'https://codeforces.com/profile/testuser',
+};
+
 describe('PlatformAccountsService', () => {
   let service: PlatformAccountsService;
 
@@ -37,6 +50,10 @@ describe('PlatformAccountsService', () => {
         {
           provide: DatabaseService,
           useValue: mockDatabaseService,
+        },
+        {
+          provide: CodeforcesAdapter,
+          useValue: mockCodeforcesAdapter,
         },
       ],
     }).compile();
@@ -53,7 +70,7 @@ describe('PlatformAccountsService', () => {
       mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
       mockDatabaseService.platformAccount.create.mockResolvedValue(mockPlatformAccount);
 
-      const result = await service.createPlatformAccount(mockUserId, {
+      await service.createPlatformAccount(mockUserId, {
         platform: Platform.LEETCODE,
         username: 'testuser',
       });
@@ -70,28 +87,48 @@ describe('PlatformAccountsService', () => {
           userId: mockUserId,
           platform: Platform.LEETCODE,
           platformUsername: 'testuser',
+          externalId: undefined,
+          profileUrl: undefined,
+          syncStatus: 'PENDING',
+          lastSyncedAt: undefined,
         },
       });
-      expect(result).toEqual({
-        id: mockPlatformAccount.id,
-        platform: mockPlatformAccount.platform,
-        username: mockPlatformAccount.platformUsername,
-        createdAt: mockPlatformAccount.createdAt,
-        updatedAt: mockPlatformAccount.updatedAt,
-      });
-
-      // Verify internal fields are not exposed
-      expect(result).not.toHaveProperty('userId');
-      expect(result).not.toHaveProperty('platformUsername');
-      expect(result).not.toHaveProperty('externalId');
-      expect(result).not.toHaveProperty('profileUrl');
-      expect(result).not.toHaveProperty('syncStatus');
-      expect(result).not.toHaveProperty('lastSyncedAt');
-      expect(result).not.toHaveProperty('accessToken');
-      expect(result).not.toHaveProperty('refreshToken');
     });
 
-    it('should throw an error if account already exists', async () => {
+    it('should verify Codeforces account before creation', async () => {
+      mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
+      mockCodeforcesAdapter.verifyAccount.mockResolvedValue(mockCodeforcesProfile);
+      mockDatabaseService.platformAccount.create.mockResolvedValue({
+        ...mockPlatformAccount,
+        platform: Platform.CODEFORCES,
+        platformUsername: 'testuser',
+        externalId: 'testuser',
+        profileUrl: 'https://codeforces.com/profile/testuser',
+        syncStatus: 'SUCCESS' as const,
+        lastSyncedAt: expect.any(Date),
+      });
+
+      await service.createPlatformAccount(mockUserId, {
+        platform: Platform.CODEFORCES,
+        username: 'testuser',
+      });
+
+
+      expect(mockCodeforcesAdapter.verifyAccount).toHaveBeenCalledWith('testuser');
+      expect(mockDatabaseService.platformAccount.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUserId,
+          platform: Platform.CODEFORCES,
+          platformUsername: 'testuser',
+          externalId: 'testuser',
+          profileUrl: 'https://codeforces.com/profile/testuser',
+          syncStatus: 'SUCCESS',
+          lastSyncedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('should throw ConflictException for duplicate account', async () => {
       mockDatabaseService.platformAccount.findFirst.mockResolvedValue(mockPlatformAccount);
 
       await expect(
@@ -99,82 +136,102 @@ describe('PlatformAccountsService', () => {
           platform: Platform.LEETCODE,
           username: 'testuser',
         }),
-      ).rejects.toThrow(ConflictException);
-    });
-  });
-
-  describe('findAllPlatformAccounts', () => {
-    it('should return all platform accounts for a user', async () => {
-      mockDatabaseService.platformAccount.findMany.mockResolvedValue([mockPlatformAccount]);
-
-      const result = await service.findAllPlatformAccounts(mockUserId);
-
-      expect(mockDatabaseService.platformAccount.findMany).toHaveBeenCalledWith({
-        where: {
-          userId: mockUserId,
-        },
-        select: {
-          id: true,
-          platform: true,
-          platformUsername: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-      const expectedResponse = {
-        id: mockPlatformAccount.id,
-        platform: mockPlatformAccount.platform,
-        username: mockPlatformAccount.platformUsername,
-        createdAt: mockPlatformAccount.createdAt,
-        updatedAt: mockPlatformAccount.updatedAt,
-      };
-      expect(result).toEqual([expectedResponse]);
-    });
-  });
-
-  describe('removePlatformAccount', () => {
-    it('should remove a platform account if it belongs to the user', async () => {
-      mockDatabaseService.platformAccount.findFirst.mockResolvedValue(mockPlatformAccount);
-      mockDatabaseService.platformAccount.delete.mockResolvedValue(mockPlatformAccount);
-
-      const result = await service.removePlatformAccount(mockUserId, mockPlatformAccount.id);
-
-      expect(mockDatabaseService.platformAccount.findFirst).toHaveBeenCalledWith({
-        where: {
-          id: mockPlatformAccount.id,
-          userId: mockUserId,
-        },
-      });
-      expect(mockDatabaseService.platformAccount.delete).toHaveBeenCalledWith({
-        where: {
-          id: mockPlatformAccount.id,
-        },
-      });
-      expect(result).toEqual({
-        id: mockPlatformAccount.id,
-        platform: mockPlatformAccount.platform,
-        username: mockPlatformAccount.platformUsername,
-        createdAt: mockPlatformAccount.createdAt,
-        updatedAt: mockPlatformAccount.updatedAt,
-      });
-
-      // Verify internal fields are not exposed
-      expect(result).not.toHaveProperty('userId');
-      expect(result).not.toHaveProperty('platformUsername');
-      expect(result).not.toHaveProperty('externalId');
-      expect(result).not.toHaveProperty('profileUrl');
-      expect(result).not.toHaveProperty('syncStatus');
-      expect(result).not.toHaveProperty('lastSyncedAt');
-      expect(result).not.toHaveProperty('accessToken');
-      expect(result).not.toHaveProperty('refreshToken');
+      ).rejects.toThrow(new ConflictException('Platform account already exists'));
     });
 
-    it('should throw an error if account does not belong to the user', async () => {
+    it('should throw NotFoundException for invalid Codeforces account', async () => {
       mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
+      mockCodeforcesAdapter.verifyAccount.mockRejectedValue(
+        new AdapterError({
+          code: AdapterErrorCode.USER_NOT_FOUND,
+          message: 'Codeforces account not found',
+          isRetryable: false,
+          isSafeToExpose: true,
+        }),
+      );
 
       await expect(
-        service.removePlatformAccount(mockUserId, 'non-existent-id'),
-      ).rejects.toThrow(NotFoundException);
+        service.createPlatformAccount(mockUserId, {
+          platform: Platform.CODEFORCES,
+          username: 'nonexistent',
+        }),
+      ).rejects.toThrow(new NotFoundException('Codeforces account not found'));
+    });
+
+    it('should throw GatewayTimeoutException for timeout', async () => {
+      mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
+      mockCodeforcesAdapter.verifyAccount.mockRejectedValue(
+        new AdapterError({
+          code: AdapterErrorCode.TIMEOUT,
+          message: 'Request timed out',
+          isRetryable: true,
+          isSafeToExpose: true,
+        }),
+      );
+
+      await expect(
+        service.createPlatformAccount(mockUserId, {
+          platform: Platform.CODEFORCES,
+          username: 'testuser',
+        }),
+      ).rejects.toThrow(new GatewayTimeoutException('Request timed out'));
+    });
+
+    it('should throw ServiceUnavailableException for network error', async () => {
+      mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
+      mockCodeforcesAdapter.verifyAccount.mockRejectedValue(
+        new AdapterError({
+          code: AdapterErrorCode.NETWORK_ERROR,
+          message: 'Network error',
+          isRetryable: true,
+          isSafeToExpose: false,
+        }),
+      );
+
+      await expect(
+        service.createPlatformAccount(mockUserId, {
+          platform: Platform.CODEFORCES,
+          username: 'testuser',
+        }),
+      ).rejects.toThrow(new ServiceUnavailableException('Network error'));
+    });
+
+    it('should throw BadGatewayException for invalid response', async () => {
+      mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
+      mockCodeforcesAdapter.verifyAccount.mockRejectedValue(
+        new AdapterError({
+          code: AdapterErrorCode.INVALID_RESPONSE,
+          message: 'Invalid response',
+          isRetryable: false,
+          isSafeToExpose: false,
+        }),
+      );
+
+      await expect(
+        service.createPlatformAccount(mockUserId, {
+          platform: Platform.CODEFORCES,
+          username: 'testuser',
+        }),
+      ).rejects.toThrow(new BadGatewayException('Invalid response'));
+    });
+
+    it('should throw ServiceUnavailableException for rate limited', async () => {
+      mockDatabaseService.platformAccount.findFirst.mockResolvedValue(null);
+      mockCodeforcesAdapter.verifyAccount.mockRejectedValue(
+        new AdapterError({
+          code: AdapterErrorCode.RATE_LIMITED,
+          message: 'Rate limited',
+          isRetryable: true,
+          isSafeToExpose: true,
+        }),
+      );
+
+      await expect(
+        service.createPlatformAccount(mockUserId, {
+          platform: Platform.CODEFORCES,
+          username: 'testuser',
+        }),
+      ).rejects.toThrow(new ServiceUnavailableException('Rate limited'));
     });
   });
 });

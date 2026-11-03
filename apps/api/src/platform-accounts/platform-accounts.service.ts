@@ -1,5 +1,7 @@
-import { Injectable, ConflictException, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, Inject, BadGatewayException, GatewayTimeoutException, ServiceUnavailableException } from '@nestjs/common';
 import { DatabaseService, Platform } from '@oneplatform/database';
+import { CodeforcesAdapter } from '../platforms/codeforces/codeforces.adapter';
+import { AdapterError, AdapterErrorCode } from '../platforms/errors/adapter-error.interface';
 import { PlatformAccountResponseDto } from './dto/platform-account-response.dto';
 
 interface CreatePlatformAccountDto {
@@ -12,6 +14,8 @@ export class PlatformAccountsService {
   constructor(
   @Inject(DatabaseService)
   private readonly database: DatabaseService,
+  @Inject(CodeforcesAdapter)
+  private readonly codeforcesAdapter: CodeforcesAdapter,
 ) {}
 
   async createPlatformAccount(
@@ -31,12 +35,54 @@ export class PlatformAccountsService {
       throw new ConflictException('Platform account already exists');
     }
 
+    let verifiedUsername = createPlatformAccountDto.username;
+    let externalId: string | undefined = undefined;
+    let profileUrl: string | undefined = undefined;
+    let syncStatus: 'SUCCESS' | 'PENDING' = 'PENDING';
+    let lastSyncedAt: Date | undefined = undefined;
+
+    // Handle Codeforces-specific account verification
+    if (createPlatformAccountDto.platform === Platform.CODEFORCES) {
+      try {
+        const profile = await this.codeforcesAdapter.verifyAccount(createPlatformAccountDto.username);
+        verifiedUsername = profile.username;
+        externalId = profile.externalId;
+        profileUrl = profile.profileUrl;
+        syncStatus = 'SUCCESS';
+        lastSyncedAt = new Date();
+      } catch (error) {
+        if (error instanceof AdapterError) {
+          if (error.code === AdapterErrorCode.USER_NOT_FOUND) {
+            throw new NotFoundException('Codeforces account not found');
+          }
+          switch (error.code) {
+            case AdapterErrorCode.TIMEOUT:
+              throw new GatewayTimeoutException(error.message);
+            case AdapterErrorCode.NETWORK_ERROR:
+            case AdapterErrorCode.UPSTREAM_UNAVAILABLE:
+              throw new ServiceUnavailableException(error.message);
+            case AdapterErrorCode.INVALID_RESPONSE:
+              throw new BadGatewayException(error.message);
+            case AdapterErrorCode.RATE_LIMITED:
+              throw new ServiceUnavailableException(error.message);
+            default:
+              throw new ConflictException(error.message);
+          }
+        }
+        throw error;
+      }
+    }
+
     // Create new platform account
     const account = await this.database.platformAccount.create({
       data: {
         userId,
         platform: createPlatformAccountDto.platform,
-        platformUsername: createPlatformAccountDto.username,
+        platformUsername: verifiedUsername,
+        externalId,
+        profileUrl,
+        syncStatus,
+        lastSyncedAt,
       },
     });
 
