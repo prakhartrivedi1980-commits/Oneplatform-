@@ -1,1816 +1,320 @@
-\# OnePlatform — Claude Code Engineering Instructions
+# OnePlatform — Claude Code Engineering Instructions
 
 
+## OnePlatform Engineering Conventions
 
-\## 1. Product Overview
+### 1. NestJS Dependency Injection
 
+This project runs NestJS through tsx.
 
+Do not rely solely on emitted decorator metadata for constructor injection.
 
-OnePlatform is a unified coding-progress and analytics platform for students.
+Use explicit injection for NestJS dependencies:
 
+```typescript
+constructor(
+  @Inject(SomeService)
+  private readonly someService: SomeService,
+) {}
+```
 
+Import Inject from `@nestjs/common`.
 
-Students can connect profiles from coding platforms such as:
+Apply this consistently to new services, guards, controllers, adapters, or other injectable providers where constructor injection is used.
 
+Do not wait for runtime "dependency is undefined" errors before adding explicit injection.
 
 
-\- LeetCode
+### 2. Canonical Platform Integration Structure
 
-\- CodeChef
+All platform integration abstractions belong under:
 
-\- HackerRank
+```
+apps/api/src/platforms/
+```
 
-\- Codeforces
+Canonical structure:
 
-\- Additional platforms in the future
+```
+apps/api/src/platforms/
+├── capabilities/
+├── types/
+├── errors/
+└── codeforces/
+```
 
+Future platform adapters should also live under this platforms hierarchy.
 
+Do NOT create parallel platform abstractions under:
 
-OnePlatform collects coding activity, normalizes it into a common data model,
+```
+apps/api/src/capabilities/
+apps/api/src/types/
+apps/api/src/errors/
+```
 
-and provides:
+Before creating a new interface/type/error/helper, inspect the existing `apps/api/src/platforms/` hierarchy and reuse existing abstractions where possible.
 
+Never create duplicate definitions merely because an existing file was not found immediately.
 
+Do not search node_modules for OnePlatform source files.
 
-\- unified coding statistics
 
-\- progress tracking
+### 3. Database Access
 
-\- topic-level analysis
+Use the shared `@oneplatform/database` DatabaseService for application database access.
 
-\- difficulty analysis
+Do NOT instantiate PrismaClient inside API controllers/services/adapters.
 
-\- coding streaks
+If another Prisma model delegate is required, extend DatabaseService minimally.
 
-\- activity history
+Reuse the existing DatabaseModule/provider architecture.
 
-\- weak-topic detection
 
-\- recommendations
+### 4. Prisma Schema and Migrations
 
-\- goals
+Never modify:
 
-\- achievements
+```
+packages/database/prisma/schema.prisma
+```
 
-\- leaderboards
+and never create/apply migrations unless the task explicitly requires a schema change AND the user has reviewed/approved that change.
 
-\- AI-assisted learning insights
+If a task appears to require a schema change:
 
+- STOP.
+- Report:
+  - the blocker
+  - proposed minimal schema change
+  - why the current schema is insufficient
 
+Wait for approval before modifying Prisma.
 
-The system must be designed as a maintainable production application,
+Do not create migrations merely to simplify application implementation.
 
-not as a temporary prototype.
 
+### 5. Type and Interface Reuse
 
+Before creating a new shared type/interface:
 
+1. Inspect existing canonical directories
+2. Search the repository source for an existing definition
+3. Reuse or extend the existing canonical type
 
+There must be one canonical definition for shared platform concepts such as:
 
-\# 2. Core Technology Stack
+- PlatformProfile
+- PlatformSubmission
+- AdapterError
+- capability interfaces
 
+Do not create duplicate copies in alternate directories.
 
 
-Do not replace these technologies without explicit user approval.
+### 6. Validation Workflow
 
+Do NOT claim that lint/typecheck/tests/build passed unless the command actually executed successfully.
 
+If Claude Code permissions, auto mode, network errors, or API errors prevent a command from running, report:
 
-\## Frontend
+BLOCKED
 
+with the exact command.
 
+Do not describe a blocked command as passed.
 
-\- Next.js
+During normal implementation, prefer this validation ladder:
 
-\- React
+First:
+```
+pnpm --filter api typecheck
+```
 
-\- TypeScript
+After the feature is structurally complete:
+```
+pnpm --filter api lint
+pnpm --filter api test
+pnpm --filter api build
+```
 
-\- Tailwind CSS
+Before commit:
+```
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
 
-\- shadcn/ui
+Do not repeatedly run full repository validation after every small edit.
 
-\- Framer Motion / Motion
+If execution permissions are blocked, stop and let the user run the command manually rather than repeatedly retrying.
 
-\- Recharts
 
+### 7. ESLint Behavior
 
+Be aware that this repository's lint scripts may use:
 
-\## Backend
+```
+eslint --fix
+```
 
+Therefore lint can modify files.
 
+After final lint/validation and before commit, always inspect:
 
-\- NestJS
+```
+git diff
+git status
+```
 
-\- TypeScript
+Do not assume the working tree is unchanged after lint.
 
-\- REST API
 
-\- Swagger / OpenAPI
+### 8. Git Safety
 
+Do not commit or push unless the current task explicitly instructs you to do so.
 
+Before any commit:
+- validation must be complete
+- git diff must be reviewed
+- git status must be reviewed
+- temporary scripts/files must be removed
+- .env files/secrets/tokens must not be staged
+- schema/migration changes must match explicit approval
 
-\## Database
+Never report "working tree clean" without actually checking git status.
 
 
+### 9. External Platform Adapters
 
-\- Supabase PostgreSQL
+Keep external API fetching separate from persistence.
 
+Adapters:
+- fetch
+- validate
+- normalize
+- translate upstream errors
 
+Persistence services:
+- persist normalized OnePlatform data
 
-PostgreSQL is the permanent source of truth.
+Orchestration services:
+- coordinate fetching, persistence, and sync state
 
+Do not combine all three responsibilities into one service.
 
+External adapter tests must mock network calls for normal CI.
 
-\## ORM
+Live external API calls are acceptance tests only and must not be required by normal tests.
 
 
+### 10. Task Scope Discipline
 
-\- Prisma
+Make the smallest change required for the current task.
 
+Do not start the next numbered task automatically.
 
+Do not add:
+- migrations
+- background jobs
+- Redis
+- analytics
+- frontend features
+- additional platform integrations
 
-\## Authentication
+unless they are explicitly part of the current task.
 
+When a task says STOP after a report, stop.
 
 
-\- Supabase Auth
+### 11. Debugging Discipline
 
+When validation fails:
+- Fix the FIRST concrete failure
+- Do not make speculative unrelated changes
+- Inspect the actual current file before claiming what it contains
+- Trust compiler/linter/runtime output over assumptions or previous reports
 
+If a file's actual content contradicts a previous report, treat the file as the source of truth.
 
-Initial authentication providers may include:
+Do not repeatedly rewrite a working component while diagnosing an unrelated failure.
 
 
+### 12. PowerShell vs Source Code
 
-\- Email
+Do not instruct the user to paste TypeScript/JavaScript source code directly into PowerShell.
 
-\- Google
+PowerShell is for commands such as:
 
-\- GitHub
+```
+pnpm
+git
+Get-Content
+Select-String
+Get-ChildItem
+```
 
+Source code belongs in source files and should be edited using code-editing tools.
 
 
-\## Cache
+## Additional OnePlatform Engineering Conventions from Tasks 5.1–5.3
 
+### 13. NestJS Dependency Injection (Extended)
 
+This project uses explicit NestJS dependency injection as described above.
 
-\- Redis
+### 14. Platform Integration Architecture (Tasks 5.1–5.3)
 
+- All platform-specific code must adhere to the canonical `apps/api/src/platforms/` structure.
+- Use existing capabilities, types, and error interfaces to avoid duplication.
+- Platform-specific adapters should implement only the necessary capabilities.
 
+### 15. Database and Transaction Management
 
-\## Background Jobs
+- Use the DatabaseService for all database operations.
+- Transactions should be used for bounded batches of operations to ensure atomicity.
+- Never expose raw PrismaClient instances in application code.
 
+### 16. Task-Specific Validation Rules
 
+- For tasks involving platform integration:
+  - Always validate with `pnpm --filter api typecheck` first.
+  - Ensure all platform-specific interfaces are correctly imported and used.
+  - Validate that external API calls are properly mocked in tests.
 
-\- BullMQ
+- For tasks involving persistence:
+  - Ensure all database operations respect uniqueness constraints.
+  - Validate that transactions handle failures gracefully.
+  - Confirm that analytics models are not modified.
 
-\- Redis
+### 17. Error Handling and Logging
 
+- Always validate external platform responses before processing.
+- Log errors with structured logs rather than scattered console logging.
+- Never expose internal stack traces to clients.
 
+### 18. Testing Strategy
 
-\## Worker
+- Unit tests should mock external API calls.
+- Integration tests should validate the complete workflow.
+- Acceptance tests should validate real external API interactions only when necessary.
 
+### 19. Security and Validation
 
+- Never commit secrets, credentials, or environment variables.
+- Validate all external inputs strictly.
+- Use rate limiting and other security headers as appropriate.
 
-\- Node.js
+### 20. Code Quality and Maintenance
 
-\- TypeScript
+- Keep files small and focused.
+- Avoid deeply nested logic.
+- Use dependency injection for services.
+- Ensure all code follows TypeScript strict mode rules.
 
 
 
-\## Repository
+--- 
 
-
-
-\- pnpm workspaces
-
-\- Turborepo
-
-
-
-\## Infrastructure
-
-
-
-\- Docker
-
-\- Docker Compose
-
-\- GitHub
-
-\- GitHub Actions
-
-
-
-
-
-\# 3. Target Repository Architecture
-
-
-
-The repository should evolve toward:
-
-
-
-Oneplatform/
-
-├── apps/
-
-│   ├── web/
-
-│   ├── api/
-
-│   └── worker/
-
-│
-
-├── packages/
-
-│   ├── database/
-
-│   ├── shared/
-
-│   ├── ui/
-
-│   └── config/
-
-│
-
-├── docs/
-
-│   ├── ARCHITECTURE.md
-
-│   ├── DATABASE.md
-
-│   ├── PLATFORM\_ADAPTERS.md
-
-│   ├── CACHE.md
-
-│   ├── QUEUES.md
-
-│   ├── API.md
-
-│   ├── DESIGN\_SYSTEM.md
-
-│   ├── SECURITY.md
-
-│   └── TESTING.md
-
-│
-
-├── .claude/
-
-│   └── settings.json
-
-│
-
-├── CLAUDE.md
-
-├── .env.example
-
-├── .gitignore
-
-├── docker-compose.yml
-
-├── pnpm-workspace.yaml
-
-├── turbo.json
-
-├── package.json
-
-└── README.md
-
-
-
-Do not create unnecessary top-level directories.
-
-
-
-
-
-\# 4. Architecture Style
-
-
-
-OnePlatform uses a:
-
-
-
-MODULAR MONOLITH + INDEPENDENT BACKGROUND WORKER
-
-
-
-Do NOT convert the application to microservices unless explicitly requested.
-
-
-
-The API should contain clearly separated domain modules.
-
-
-
-Examples:
-
-
-
-\- auth
-
-\- users
-
-\- platforms
-
-\- profiles
-
-\- submissions
-
-\- problems
-
-\- analytics
-
-\- recommendations
-
-\- goals
-
-\- leaderboards
-
-\- health
-
-
-
-Keep domain boundaries clear even though the API is deployed as one application.
-
-
-
-
-
-\# 5. Application Responsibilities
-
-
-
-\## apps/web
-
-
-
-Responsible for:
-
-
-
-\- UI
-
-\- routing
-
-\- dashboard
-
-\- authentication experience
-
-\- analytics visualization
-
-\- profile management
-
-\- platform connection UI
-
-\- goals
-
-\- recommendations
-
-\- responsive design
-
-
-
-Do not put core backend business logic in the frontend.
-
-
-
-
-
-\## apps/api
-
-
-
-Responsible for:
-
-
-
-\- REST API
-
-\- authorization
-
-\- validation
-
-\- domain/business logic
-
-\- database access
-
-\- queueing background jobs
-
-\- analytics retrieval
-
-\- platform account management
-
-
-
-Controllers must remain thin.
-
-
-
-Business logic belongs in services/domain components.
-
-
-
-
-
-\## apps/worker
-
-
-
-Responsible for:
-
-
-
-\- coding-platform synchronization
-
-\- scheduled synchronization
-
-\- expensive background processing
-
-\- retryable jobs
-
-\- analytics recalculation jobs
-
-\- future recommendation-generation jobs
-
-
-
-Do not perform long-running synchronization inside HTTP request handlers.
-
-
-
-
-
-\# 6. Platform Adapter Architecture
-
-
-
-External coding platforms must use adapters.
-
-
-
-Do NOT scatter LeetCode, CodeChef, HackerRank, or Codeforces-specific logic
-
-through the application.
-
-
-
-Use a common abstraction similar to:
-
-
-
-PlatformAdapter
-
-├── LeetCodeAdapter
-
-├── CodeChefAdapter
-
-├── HackerRankAdapter
-
-└── CodeforcesAdapter
-
-
-
-Adapters should expose normalized operations such as:
-
-
-
-\- getProfile()
-
-\- getSubmissions()
-
-\- getStats()
-
-
-
-Exact interfaces should be designed when implementation begins.
-
-
-
-All external responses must be validated and normalized before entering
-
-the core domain.
-
-
-
-Platform-specific response structures must NOT leak into:
-
-
-
-\- analytics
-
-\- dashboard logic
-
-\- recommendation logic
-
-\- shared domain models
-
-
-
-
-
-\# 7. Data Flow
-
-
-
-The intended high-level flow is:
-
-
-
-External Coding Platform
-
-&#x20;       ↓
-
-Platform Adapter
-
-&#x20;       ↓
-
-Validation
-
-&#x20;       ↓
-
-Normalization
-
-&#x20;       ↓
-
-PostgreSQL
-
-&#x20;       ↓
-
-Analytics Engine
-
-&#x20;       ↓
-
-Redis Cache
-
-&#x20;       ↓
-
-REST API
-
-&#x20;       ↓
-
-Web Dashboard
-
-
-
-Background synchronization should follow:
-
-
-
-Scheduler / API
-
-&#x20;       ↓
-
-BullMQ
-
-&#x20;       ↓
-
-Redis
-
-&#x20;       ↓
-
-Worker
-
-&#x20;       ↓
-
-Platform Adapter
-
-&#x20;       ↓
-
-Normalization
-
-&#x20;       ↓
-
-PostgreSQL
-
-&#x20;       ↓
-
-Analytics recalculation
-
-&#x20;       ↓
-
-Cache invalidation
-
-
-
-
-
-\# 8. Database Rules
-
-
-
-Supabase PostgreSQL is the permanent source of truth.
-
-
-
-Use Prisma for application database access unless there is a documented
-
-technical reason not to.
-
-
-
-Core entities are expected to include concepts such as:
-
-
-
-\- User
-
-\- PlatformAccount
-
-\- Problem
-
-\- Topic
-
-\- ProblemTopic
-
-\- Submission
-
-\- DailyActivity
-
-\- UserTopicStats
-
-\- Goal
-
-\- Recommendation
-
-
-
-Do not create duplicate tables for each coding platform when normalized
-
-tables can represent the same concept.
-
-
-
-Prefer:
-
-
-
-PlatformAccount
-
-Submission
-
-Problem
-
-
-
-with a platform field.
-
-
-
-Avoid:
-
-
-
-LeetCodeSubmission
-
-CodeChefSubmission
-
-HackerRankSubmission
-
-
-
-unless there is a compelling documented reason.
-
-
-
-Use:
-
-
-
-\- primary keys
-
-\- foreign keys
-
-\- indexes
-
-\- unique constraints
-
-\- timestamps
-
-
-
-appropriately.
-
-
-
-Never run destructive production database operations automatically.
-
-
-
-
-
-\# 9. Redis Rules
-
-
-
-Redis is NOT permanent storage.
-
-
-
-Redis may be used for:
-
-
-
-\- caching
-
-\- BullMQ
-
-\- rate limiting
-
-\- temporary synchronization state
-
-\- distributed locks when required
-
-
-
-Permanent user data belongs in PostgreSQL.
-
-
-
-Use predictable namespaced cache keys.
-
-
-
-Examples:
-
-
-
-user:{id}:dashboard
-
-user:{id}:stats
-
-user:{id}:recommendations
-
-leaderboard:weekly
-
-
-
-Cache invalidation must be considered whenever source data changes.
-
-
-
-
-
-\# 10. Queue Rules
-
-
-
-Use BullMQ for background work.
-
-
-
-Jobs should be:
-
-
-
-\- idempotent where practical
-
-\- retryable
-
-\- observable
-
-\- small and focused
-
-
-
-External-platform jobs must account for:
-
-
-
-\- API failures
-
-\- timeouts
-
-\- rate limits
-
-\- partial responses
-
-\- duplicate data
-
-\- retries
-
-
-
-Do not create uncontrolled request loops against external platforms.
-
-
-
-
-
-\# 11. Analytics Rules
-
-
-
-Statistics must be calculated from stored/verified data.
-
-
-
-Examples:
-
-
-
-\- total solved
-
-\- difficulty distribution
-
-\- topic performance
-
-\- language usage
-
-\- daily activity
-
-\- weekly activity
-
-\- streaks
-
-\- platform distribution
-
-\- improvement trends
-
-
-
-Do not use an LLM to calculate factual statistics.
-
-
-
-The deterministic analytics layer must produce structured insights first.
-
-
-
-Future AI functionality may explain or recommend based on those structured
-
-insights.
-
-
-
-
-
-\# 12. AI Feature Architecture
-
-
-
-Future AI features should follow:
-
-
-
-Database
-
-&#x20;  ↓
-
-Analytics Engine
-
-&#x20;  ↓
-
-Structured Insights
-
-&#x20;  ↓
-
-AI Recommendation Layer
-
-&#x20;  ↓
-
-Student
-
-
-
-Never ask an LLM to invent statistics about the student.
-
-
-
-All numbers presented to the AI layer must originate from verified
-
-application data.
-
-
-
-
-
-\# 13. API Conventions
-
-
-
-Public application endpoints should use:
-
-
-
-/api/v1/\*
-
-
-
-Use REST unless explicitly approved otherwise.
-
-
-
-Use:
-
-
-
-\- proper HTTP status codes
-
-\- DTO validation
-
-\- consistent error responses
-
-\- pagination for large collections
-
-\- authentication guards
-
-\- authorization checks
-
-
-
-Document APIs with Swagger/OpenAPI.
-
-
-
-Do not expose internal stack traces to clients.
-
-
-
-
-
-\# 14. Frontend Design Direction
-
-
-
-OnePlatform should feel like a modern developer analytics product.
-
-
-
-General inspiration:
-
-
-
-\- GitHub
-
-\- Linear
-
-\- Vercel
-
-\- modern analytics dashboards
-
-
-
-The UI should be:
-
-
-
-\- clean
-
-\- modern
-
-\- responsive
-
-\- interactive
-
-\- developer-focused
-
-\- information-dense without being cluttered
-
-
-
-Prefer a polished dark-mode experience while maintaining accessibility.
-
-
-
-Avoid:
-
-
-
-\- excessive gradients
-
-\- excessive glassmorphism
-
-\- unnecessary animations
-
-\- random colors
-
-\- inconsistent spacing
-
-\- oversized dashboard cards
-
-
-
-Use animation purposefully for:
-
-
-
-\- counters
-
-\- charts
-
-\- progress
-
-\- transitions
-
-\- loading states
-
-\- achievements
-
-\- synchronization status
-
-
-
-Use a consistent design system.
-
-
-
-
-
-\# 15. Security Rules
-
-
-
-Never expose secrets.
-
-
-
-Never commit:
-
-
-
-\- .env
-
-\- access tokens
-
-\- API keys
-
-\- passwords
-
-\- database credentials
-
-\- Supabase service-role keys
-
-\- GitHub credentials
-
-
-
-Use environment variables.
-
-
-
-Maintain `.env.example` containing variable names only.
-
-
-
-Validate all external input.
-
-
-
-Treat data received from coding platforms as untrusted input.
-
-
-
-Apply appropriate:
-
-
-
-\- authentication
-
-\- authorization
-
-\- rate limiting
-
-\- CORS
-
-\- security headers
-
-\- request validation
-
-\- output sanitization
-
-
-
-Do not log secrets.
-
-
-
-
-
-\# 16. TypeScript Rules
-
-
-
-Use TypeScript strict mode.
-
-
-
-Avoid `any`.
-
-
-
-If `any` is unavoidable, document why.
-
-
-
-Prefer:
-
-
-
-\- explicit domain types
-
-\- schemas for external data
-
-\- reusable shared contracts
-
-\- type-safe database access
-
-
-
-Do not duplicate interfaces across applications when they belong in
-
-packages/shared.
-
-
-
-
-
-\# 17. Code Quality
-
-
-
-Prefer:
-
-
-
-\- small focused functions
-
-\- clear naming
-
-\- dependency injection
-
-\- modular services
-
-\- reusable components
-
-\- explicit error handling
-
-
-
-Avoid:
-
-
-
-\- giant files
-
-\- deeply nested logic
-
-\- duplicated business logic
-
-\- unexplained magic values
-
-\- premature abstractions
-
-\- unnecessary dependencies
-
-
-
-Do not refactor unrelated working code while implementing a feature.
-
-
-
-
-
-\# 18. Testing
-
-
-
-Changes should be verified appropriately.
-
-
-
-Before considering substantial work complete, run relevant:
-
-
-
-\- lint
-
-\- typecheck
-
-\- unit tests
-
-\- integration tests
-
-\- build
-
-
-
-Do not claim a command succeeded unless it was actually run successfully.
-
-
-
-If a check fails because of the current change, fix it before committing.
-
-
-
-If a pre-existing failure exists, report it clearly rather than hiding it.
-
-
-
-
-
-\# 19. Documentation
-
-
-
-Architecture decisions should be reflected in `/docs`.
-
-
-
-Before changing an established subsystem, read its relevant documentation.
-
-
-
-Important documentation:
-
-
-
-\- ARCHITECTURE.md
-
-\- DATABASE.md
-
-\- PLATFORM\_ADAPTERS.md
-
-\- CACHE.md
-
-\- QUEUES.md
-
-\- API.md
-
-\- DESIGN\_SYSTEM.md
-
-\- SECURITY.md
-
-\- TESTING.md
-
-
-
-Update documentation when architecture materially changes.
-
-
-
-
-
-\# 20. Git Policy — CRITICAL
-
-
-
-The project uses ONLY the `main` branch for current development.
-
-
-
-Before starting work, verify:
-
-
-
-git branch --show-current
-
-
-
-It MUST return:
-
-
-
-main
-
-
-
-DO NOT create branches.
-
-
-
-DO NOT use:
-
-
-
-git checkout -b
-
-git switch -c
-
-
-
-DO NOT create:
-
-
-
-\- feature branches
-
-\- fix branches
-
-\- development branches
-
-\- temporary branches
-
-
-
-Work directly on `main`.
-
-
-
-
-
-\# 21. Git Safety
-
-
-
-Never run automatically:
-
-
-
-git push --force
-
-git push -f
-
-git reset --hard
-
-git clean -fd
-
-
-
-Never rewrite published Git history.
-
-
-
-Never delete repository history.
-
-
-
-Never change the origin remote unless explicitly instructed.
-
-
-
-The expected remote is:
-
-
-
-https://github.com/prakhartrivedi1980-commits/Oneplatform-.git
-
-
-
-The expected push target is:
-
-
-
-origin main
-
-
-
-
-
-\# 22. Git Workflow
-
-
-
-At the beginning of a development task:
-
-
-
-1\. Run:
-
-
-
-&#x20;  git status
-
-
-
-2\. Run:
-
-
-
-&#x20;  git branch --show-current
-
-
-
-3\. Confirm the branch is `main`.
-
-
-
-4\. Inspect relevant existing files before modifying them.
-
-
-
-Do not blindly overwrite existing user work.
-
-
-
-
-
-After implementation:
-
-
-
-1\. Run relevant lint checks.
-
-2\. Run typecheck.
-
-3\. Run relevant tests.
-
-4\. Run build when appropriate.
-
-5\. Run:
-
-
-
-&#x20;  git status
-
-
-
-6\. Review:
-
-
-
-&#x20;  git diff
-
-
-
-7\. Stage only intended files.
-
-
-
-8\. Commit with a clear descriptive commit message.
-
-
-
-9\. Push using:
-
-
-
-&#x20;  git push origin main
-
-
-
-Never force push.
-
-
-
-
-
-\# 23. Commit Style
-
-
-
-Use clear commit messages.
-
-
-
-Preferred examples:
-
-
-
-feat: add LeetCode platform adapter
-
-
-
-feat: implement dashboard analytics endpoint
-
-
-
-fix: correct streak calculation
-
-
-
-refactor: normalize platform submission mapping
-
-
-
-test: add analytics service tests
-
-
-
-docs: document platform adapter architecture
-
-
-
-chore: configure monorepo workspace
-
-
-
-Do not use meaningless messages such as:
-
-
-
-update
-
-changes
-
-stuff
-
-fix things
-
-
-
-
-
-\# 24. Agent Working Procedure
-
-
-
-For every substantial task:
-
-
-
-1\. Understand the request.
-
-
-
-2\. Read CLAUDE.md.
-
-
-
-3\. Inspect relevant repository files.
-
-
-
-4\. Read relevant `/docs` files.
-
-
-
-5\. Check Git status and current branch.
-
-
-
-6\. Understand the existing implementation before changing it.
-
-
-
-7\. Plan the smallest coherent implementation.
-
-
-
-8\. Implement only the requested scope.
-
-
-
-9\. Validate the implementation.
-
-
-
-10\. Run relevant tests/checks.
-
-
-
-11\. Review the resulting diff.
-
-
-
-12\. Update documentation when necessary.
-
-
-
-13\. Commit completed work.
-
-
-
-14\. Push to `origin main` when the task is complete and checks pass.
-
-
-
-Do not create branches.
-
-
-
-
-
-\# 25. Autonomous Work Rules
-
-
-
-The agent may autonomously:
-
-
-
-\- create project files
-
-\- create application modules
-
-\- install normal project dependencies
-
-\- modify application code
-
-\- write tests
-
-\- run tests
-
-\- run lint
-
-\- run typecheck
-
-\- run builds
-
-\- run safe Docker commands
-
-\- run safe Prisma commands
-
-\- create migrations
-
-\- update documentation
-
-\- commit completed work
-
-\- push completed work to origin/main
-
-
-
-The agent must stop and ask before:
-
-
-
-\- deleting important user data
-
-\- resetting a database
-
-\- deleting Docker volumes
-
-\- force pushing
-
-\- rewriting Git history
-
-\- changing the architecture substantially
-
-\- replacing a core technology
-
-\- removing major working functionality
-
-\- exposing a new public service
-
-\- performing an operation with unclear destructive consequences
-
-
-
-
-
-\# 26. Dependency Policy
-
-
-
-Before adding a dependency:
-
-
-
-1\. determine whether existing dependencies already solve the problem
-
-2\. prefer actively maintained packages
-
-3\. avoid unnecessary dependencies
-
-4\. install the dependency in the correct workspace
-
-5\. update the lockfile
-
-
-
-Do not introduce a new framework when the existing stack can solve the
-
-problem.
-
-
-
-
-
-\# 27. Scope Discipline
-
-
-
-Do not turn small tasks into repository-wide rewrites.
-
-
-
-If asked to implement one feature:
-
-
-
-\- modify the relevant modules
-
-\- add necessary tests
-
-\- update relevant documentation
-
-\- leave unrelated working systems alone
-
-
-
-Do not perform speculative refactoring unless it directly enables the
-
-requested task.
-
-
-
-
-
-\# 28. Error Handling
-
-
-
-Never silently swallow errors.
-
-
-
-External platform failures should provide enough structured information
-
-for:
-
-
-
-\- retries
-
-\- logging
-
-\- monitoring
-
-\- debugging
-
-
-
-Do not expose sensitive internal information to frontend clients.
-
-
-
-
-
-\# 29. Observability
-
-
-
-Design important operations so they can eventually expose:
-
-
-
-\- request latency
-
-\- database latency
-
-\- cache performance
-
-\- queue depth
-
-\- synchronization failures
-
-\- external API failures
-
-\- worker processing time
-
-\- rate-limit events
-
-
-
-Use structured logs rather than scattered console logging in production
-
-code.
-
-
-
-
-
-\# 30. Current Development Principle
-
-
-
-Build OnePlatform incrementally.
-
-
-
-Do NOT attempt to implement the entire product in one task.
-
-
-
-Preferred progression:
-
-
-
-1\. repository foundation
-
-2\. monorepo
-
-3\. infrastructure
-
-4\. database
-
-5\. authentication
-
-6\. platform adapter abstraction
-
-7\. first platform integration
-
-8\. synchronization worker
-
-9\. analytics
-
-10\. dashboard
-
-11\. additional platforms
-
-12\. recommendations
-
-13\. AI features
-
-14\. social/leaderboard features
-
-15\. production hardening
-
-
-
-Each stage should leave the repository in a working state.
-
+These conventions are designed to maintain consistency and scalability across the OnePlatform project.
