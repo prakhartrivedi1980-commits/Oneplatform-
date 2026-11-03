@@ -9,6 +9,6 @@ import { UserSyncService } from './user-sync.service.js';
   imports: [DatabaseModule],
   providers: [AuthService, AuthGuard, UserSyncService],
   controllers: [AuthController],
-  exports: [AuthService, AuthGuard],
+  exports: [AuthService, AuthGuard, UserSyncService],
 })
 export class AuthModule {}

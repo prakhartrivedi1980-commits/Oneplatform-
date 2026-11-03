@@ -11,6 +11,10 @@ class DatabaseService {
     return this.prisma.user;
   }
 
+  get platformAccount() {
+    return this.prisma.platformAccount;
+  }
+
   // Add other model delegates as needed
 }
 
